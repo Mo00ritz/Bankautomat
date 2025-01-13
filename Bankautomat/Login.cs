@@ -21,11 +21,10 @@ namespace Bankautomat
             // Validieren des Logins mit der Datenbank
             if (datenbank.ValidateLogin(benutzername, passwort))
             {
-                // Login erfolgreich
                 MessageBox.Show("Login erfolgreich!");
-                this.Hide();  // Login-Fenster verstecken
-                Hauptmenue mainForm = new Hauptmenue(); // Neues Hauptmenü-Fenster öffnen
-                mainForm.Show();
+                Hauptmenue hauptmenue = new Hauptmenue(benutzername);
+                this.Hide();
+                hauptmenue.Show();
             }
             else
             {

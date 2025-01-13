@@ -136,6 +136,28 @@ namespace Bankautomat
             }
         }
 
+        //Geld Abheben
+        public void AddTransaction(string kontoNummer, string datum, decimal betrag, string typ)
+        {
+            using (var connection = GetConnection())
+            {
+                connection.Open();
+                string query = @"
+        INSERT INTO Transaktionen (KundenId, Datum, Menge, TransaktionsTyp)
+        VALUES ((SELECT Id FROM Kunden WHERE AccountNummer = @kontoNummer), @datum, @betrag, @typ);";
+
+                using (var command = new SQLiteCommand(query, connection))
+                {
+                    command.Parameters.AddWithValue("@kontoNummer", kontoNummer);
+                    command.Parameters.AddWithValue("@datum", datum);
+                    command.Parameters.AddWithValue("@betrag", betrag);
+                    command.Parameters.AddWithValue("@typ", typ);
+
+                    command.ExecuteNonQuery();
+                }
+            }
+        }
+
         // Kunden löschen
         public void DeleteCustomer(string kontoNummer)
         {

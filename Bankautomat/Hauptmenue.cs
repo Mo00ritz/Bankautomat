@@ -113,21 +113,29 @@ namespace Bankautomat
                     {
                         connection.Open();
 
-                        // Abziehen vom Absenderkonto
-                        string updateAbsenderQuery = @"
-                            UPDATE Kunden 
-                            SET Kontostand = Kontostand - @betrag 
-                            WHERE AccountNummer = @kontoNummer;";
+                        // Überprüfen, ob Zielkonto existiert
+                        string checkZielkontoQuery = "SELECT COUNT(1) FROM Kunden WHERE AccountNummer = @zielKonto;";
+                        using (var checkCommand = new SQLiteCommand(checkZielkontoQuery, connection))
+                        {
+                            checkCommand.Parameters.AddWithValue("@zielKonto", zielKonto);
+                            int zielkontoExists = Convert.ToInt32(checkCommand.ExecuteScalar());
 
-                        // Hinzufügen zum Zielkonto
-                        string updateEmpfaengerQuery = @"
-                            UPDATE Kunden 
-                            SET Kontostand = Kontostand + @betrag 
-                            WHERE AccountNummer = @zielKonto;";
+                            if (zielkontoExists == 0)
+                            {
+                                MessageBox.Show("Das Zielkonto existiert nicht.", "Fehler", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                                return;
+                            }
+                        }
 
+                        // Transaktionen und Kontostandsaktualisierungen
                         using (var transaction = connection.BeginTransaction())
                         {
-                            // Absenderkonto aktualisieren
+                            // Absender-Kontostand aktualisieren
+                            string updateAbsenderQuery = @"
+                        UPDATE Kunden 
+                        SET Kontostand = Kontostand - @betrag 
+                        WHERE AccountNummer = @kontoNummer;";
+
                             using (var command = new SQLiteCommand(updateAbsenderQuery, connection, transaction))
                             {
                                 command.Parameters.AddWithValue("@betrag", betrag);
@@ -135,7 +143,12 @@ namespace Bankautomat
                                 command.ExecuteNonQuery();
                             }
 
-                            // Zielkonto aktualisieren
+                            // Empfänger-Kontostand aktualisieren
+                            string updateEmpfaengerQuery = @"
+                        UPDATE Kunden 
+                        SET Kontostand = Kontostand + @betrag 
+                        WHERE AccountNummer = @zielKonto;";
+
                             using (var command = new SQLiteCommand(updateEmpfaengerQuery, connection, transaction))
                             {
                                 command.Parameters.AddWithValue("@betrag", betrag);
@@ -143,11 +156,45 @@ namespace Bankautomat
                                 command.ExecuteNonQuery();
                             }
 
+                            // Transaktion für Absender hinzufügen
+                            string insertAbsenderTransaction = @"
+                        INSERT INTO Transaktionen (KundenId, Datum, Menge, TransaktionsTyp)
+                        VALUES (
+                            (SELECT Id FROM Kunden WHERE AccountNummer = @kontoNummer),
+                            @datum,
+                            @betrag,
+                            'Überweisung - Absender');";
+
+                            using (var command = new SQLiteCommand(insertAbsenderTransaction, connection, transaction))
+                            {
+                                command.Parameters.AddWithValue("@kontoNummer", kontoNummer);
+                                command.Parameters.AddWithValue("@datum", DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"));
+                                command.Parameters.AddWithValue("@betrag", -betrag);
+                                command.ExecuteNonQuery();
+                            }
+
+                            // Transaktion für Empfänger hinzufügen
+                            string insertEmpfaengerTransaction = @"
+                        INSERT INTO Transaktionen (KundenId, Datum, Menge, TransaktionsTyp)
+                        VALUES (
+                            (SELECT Id FROM Kunden WHERE AccountNummer = @zielKonto),
+                            @datum,
+                            @betrag,
+                            'Überweisung - Empfänger');";
+
+                            using (var command = new SQLiteCommand(insertEmpfaengerTransaction, connection, transaction))
+                            {
+                                command.Parameters.AddWithValue("@zielKonto", zielKonto);
+                                command.Parameters.AddWithValue("@datum", DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"));
+                                command.Parameters.AddWithValue("@betrag", betrag);
+                                command.ExecuteNonQuery();
+                            }
+
                             transaction.Commit();
                         }
 
                         MessageBox.Show("Überweisung erfolgreich durchgeführt!", "Erfolg", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                        LadeBenutzerdaten(); // Aktualisiert das Hauptmenü
+                        LadeBenutzerdaten(); // Aktualisiert die Oberfläche
                     }
                 }
                 catch (Exception ex)
@@ -160,6 +207,7 @@ namespace Bankautomat
                 MessageBox.Show("Ungültiger Betrag.", "Fehler", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
+
 
         // Methode für den Aktualisieren-Button
         private void ReloadBtn_Click(object sender, EventArgs e)

@@ -91,7 +91,7 @@
             this.TransaktionenListBox.FormattingEnabled = true;
             this.TransaktionenListBox.Location = new System.Drawing.Point(96, 68);
             this.TransaktionenListBox.Name = "TransaktionenListBox";
-            this.TransaktionenListBox.Size = new System.Drawing.Size(225, 121);
+            this.TransaktionenListBox.Size = new System.Drawing.Size(402, 121);
             this.TransaktionenListBox.TabIndex = 5;
             // 
             // LogoutBtn

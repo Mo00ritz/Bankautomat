@@ -12,7 +12,7 @@ namespace Bankautomat
     public class Datenbank
     {
         // Verbindung zur SQLite-Datenbank
-        private string connectionString = "Data Source=BankDB.db;Version=3;";
+        private string connectionString = @"Data Source=C:\Users\morit\Desktop\Bankautomat\Bankautomat\BankDB.db;Version=3;";
 
         // Gibt die Verbindung zur Datenbank zurück
         public SQLiteConnection GetConnection()

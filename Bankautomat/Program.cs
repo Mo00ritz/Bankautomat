@@ -16,7 +16,6 @@ namespace Bankautomat
         {
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
-            Application.Run(new Login());
 
             Datenbank datenbank = new Datenbank();
 
@@ -26,23 +25,11 @@ namespace Bankautomat
             // Tabellen erstellen, falls noch nicht vorhanden
             datenbank.CreateTables();
 
-            // Kunden hinzufügen
-            datenbank.AddCustomer("123456", "1234", 1000.00m);
+            // Optional: Testdaten hinzufügen
+            datenbank.AddCustomer("Winkler", "1234", 1000.00m);
+            datenbank.AddCustomer("Rainer", "1234", 10000.00m);
 
-            // Kunden abrufen
-            datenbank.GetCustomers();
-
-            // Kontostand aktualisieren
-            datenbank.UpdateBalance("123456", 1500.00m);
-
-            // Kunden nach Update abrufen
-            datenbank.GetCustomers();
-
-            // Kunden löschen
-            datenbank.DeleteCustomer("123456");
-
-            // Kunden nach Löschung abrufen
-            datenbank.GetCustomers();
+            Application.Run(new Login());
         }
     }
 }

@@ -27,27 +27,32 @@ namespace Bankautomat
                     connection.Open();
 
                     string query = @"
-                        SELECT Kontostand 
+                        SELECT Kontostand, Nachname, Vorname, Telefonnummer 
                         FROM Kunden 
                         WHERE AccountNummer = @kontoNummer;";
 
                     using (var command = new SQLiteCommand(query, connection))
                     {
                         command.Parameters.AddWithValue("@kontoNummer", kontoNummer);
-                        var kontostand = command.ExecuteScalar();
-
-                        if (kontostand != null)
+                        using (var reader = command.ExecuteReader())
                         {
-                            Kundennummerlbl.Text = kontoNummer;
-                            Kontostandlbl.Text = $"{kontostand} €";
-                        }
-                        else
-                        {
-                            MessageBox.Show("Fehler: Kontodaten konnten nicht geladen werden.", "Fehler", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                            if (reader.Read())
+                            {
+                                string nachname = reader["Nachname"].ToString();
+                                string vorname = reader["Vorname"].ToString();
+                                string telefonnummer = reader["Telefonnummer"].ToString();
+                                Kundennummerlbl.Text = kontoNummer;
+                                Kontostandlbl.Text = $"{reader["Kontostand"]} €";
+                                Nachnamelbl.Text = $"{nachname}";
+                                Vornamelbl.Text = $"{vorname}";
+                                Telefonlbl.Text = $"{telefonnummer}";
+                            }
+                            else
+                            {
+                                MessageBox.Show("Fehler: Kontodaten konnten nicht geladen werden.", "Fehler", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                            }
                         }
                     }
-
-                    LadeTransaktionen(connection);
                 }
             }
             catch (Exception ex)

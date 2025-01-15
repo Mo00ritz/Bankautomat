@@ -12,7 +12,7 @@ namespace Bankautomat
     public class Datenbank
     {
         // Verbindung zur SQLite-Datenbank
-        private string connectionString = @"Data Source=C:\Users\morit\Desktop\Bankautomat\Bankautomat\BankDB.db;Version=3;";
+        private string connectionString = @"Data Source=BankDB.db;Version=3;";
 
         // Gibt die Verbindung zur Datenbank zurück
         public SQLiteConnection GetConnection()
@@ -28,22 +28,25 @@ namespace Bankautomat
                 connection.Open();
 
                 string createKundenTabelle = @"
-        CREATE TABLE IF NOT EXISTS Kunden (
-            Id INTEGER PRIMARY KEY AUTOINCREMENT,
-            AccountNummer TEXT NOT NULL,
-            PIN TEXT NOT NULL,
-            Kontostand REAL NOT NULL
-        );";
+                        CREATE TABLE IF NOT EXISTS Kunden (
+                        Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        AccountNummer TEXT NOT NULL,
+                        PIN TEXT NOT NULL,
+                        Kontostand REAL NOT NULL,
+                        Vorname TEXT NOT NULL,
+                        Nachname TEXT NOT NULL,
+                        Telefonnummer TEXT NOT NULL
+                        );";
 
                 string createTransaktionsTabelle = @"
-        CREATE TABLE IF NOT EXISTS Transaktionen (
-            Id INTEGER PRIMARY KEY AUTOINCREMENT,
-            KundenId INTEGER NOT NULL,
-            Datum TEXT NOT NULL,
-            Menge REAL NOT NULL,
-            TransaktionsTyp TEXT NOT NULL,
-            FOREIGN KEY (KundenId) REFERENCES Kunden(Id)
-        );";
+                        CREATE TABLE IF NOT EXISTS Transaktionen (
+                        Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        KundenId INTEGER NOT NULL,
+                        Datum TEXT NOT NULL,
+                        Menge REAL NOT NULL,
+                        TransaktionsTyp TEXT NOT NULL,
+                        FOREIGN KEY (KundenId) REFERENCES Kunden(Id)
+                        );";
 
                 using (var command = new SQLiteCommand(createKundenTabelle, connection))
                 {
@@ -58,7 +61,7 @@ namespace Bankautomat
         }
 
         // Kunden hinzufügen
-        public void AddCustomer(string kontoNummer, string pin, decimal kontostand)
+        public void AddCustomer(string kontoNummer, string pin, decimal kontostand, string nachname, string vorname, string telefonnummer)
         {
             using (var connection = GetConnection())
             {
@@ -71,14 +74,17 @@ namespace Bankautomat
                         string hashedPin = ComputeSHA256Hash(pin);
 
                         string query = @"
-                    INSERT INTO Kunden (AccountNummer, PIN, Kontostand)
-                    VALUES (@kontoNummer, @hashedPin, @kontostand);";
+                    INSERT INTO Kunden (AccountNummer, PIN, Kontostand, Nachname, Vorname, Telefonnummer)
+                    VALUES (@kontoNummer, @hashedPin, @kontostand, @nachname, @vorname, @telefonnummer);";
 
                         using (var command = new SQLiteCommand(query, connection))
                         {
                             command.Parameters.AddWithValue("@kontoNummer", kontoNummer);
                             command.Parameters.AddWithValue("@hashedPin", hashedPin);
                             command.Parameters.AddWithValue("@kontostand", kontostand);
+                            command.Parameters.AddWithValue("@nachname", nachname);
+                            command.Parameters.AddWithValue("@vorname", vorname);
+                            command.Parameters.AddWithValue("@telefonnummer", telefonnummer);
 
                             command.ExecuteNonQuery();
                         }
@@ -230,6 +236,51 @@ namespace Bankautomat
             else
             {
                 Console.WriteLine("Die BankDB.db Datei fehlt.");
+            }
+        }
+
+        public void ResetDatabase()
+        {
+            using (var connection = GetConnection())
+            {
+                connection.Open();
+
+                using (var transaction = connection.BeginTransaction())
+                {
+                    try
+                    {
+                        // Alte Tabelle löschen
+                        string dropTableQuery = "DROP TABLE IF EXISTS Kunden;";
+                        using (var dropCommand = new SQLiteCommand(dropTableQuery, connection))
+                        {
+                            dropCommand.ExecuteNonQuery();
+                        }
+
+                        // Neue Tabelle erstellen
+                        string createTableQuery = @"
+                    CREATE TABLE Kunden (
+                        Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        AccountNummer TEXT NOT NULL,
+                        PIN TEXT NOT NULL,
+                        Kontostand REAL NOT NULL,
+                        Nachname TEXT NOT NULL,
+                        Vorname TEXT NOT NULL,
+                        Telefonnummer TEXT NOT NULL
+                    );";
+                        using (var createCommand = new SQLiteCommand(createTableQuery, connection))
+                        {
+                            createCommand.ExecuteNonQuery();
+                        }
+
+                        // Transaktion abschließen
+                        transaction.Commit();
+                    }
+                    catch (Exception ex)
+                    {
+                        transaction.Rollback();
+                        Console.WriteLine($"Fehler beim Zurücksetzen der Datenbank: {ex.Message}");
+                    }
+                }
             }
         }
     }
